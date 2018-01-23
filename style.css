@@ -1,0 +1,21 @@
+
+/*Header*/
+.heading-text {
+    text-align: center;
+}
+
+/*Image uploader*/
+
+#image-uploader {
+    display: none;
+}
+
+.image-uploader-label {
+    margin: 0rem auto;
+}
+
+
+/*Canvas*/
+.canvas-container {
+    text-align: center;
+}
