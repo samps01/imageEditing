@@ -1,27 +1,26 @@
 var ImageEditor = (function () {
     function ImageEditor() {
-        this.fileReader = new FileReader();
-        this.image = new Image();
+        this.worker = new Worker('worker.js');
         this.getCanvasElement();
         this.inputReader();
     }
-    ImageEditor.prototype.imageLoader = function () {
+    ImageEditor.prototype.applyFilter = function (image) {
+        var imageData = this.imageCtx.getImageData(0, 0, image.width, image.height);
+        this.worker.postMessage(imageData, [imageData.data.buffer]);
+        this.listenToWorker();
+    };
+    ImageEditor.prototype.listenToWorker = function () {
         var _this = this;
-        this.image.addEventListener('load', function (event) {
-            _this.imageCtx.canvas.width = _this.image.width;
-            _this.imageCtx.canvas.height = _this.image.height;
-            console.log(_this.imageCtx);
-            _this.imageCtx.drawImage(_this.image, 0, 0);
+        this.worker.addEventListener('message', function (d) {
+            var imageData = d.data;
+            _this.imageCtx.putImageData(imageData, 0, 0);
         });
     };
-    ImageEditor.prototype.readFile = function (file) {
-        var _this = this;
-        this.fileReader.readAsDataURL(file);
-        this.fileReader.addEventListener('load', function (event) {
-            var base64 = event.target['result'];
-            _this.image.src = base64;
-            _this.imageLoader();
-        });
+    ImageEditor.prototype.imageLoader = function (image) {
+        this.imageCtx.canvas.width = image.width;
+        this.imageCtx.canvas.height = image.height;
+        this.imageCtx.drawImage(image, 0, 0);
+        this.applyFilter(image);
     };
     ImageEditor.prototype.getCanvasElement = function () {
         this.imageCanvas = document.querySelector('#image-canvas');
@@ -32,7 +31,9 @@ var ImageEditor = (function () {
         var input = document.getElementById('image-uploader');
         input.addEventListener('change', function (event) {
             var file = event.target['files'][0];
-            _this.readFile(file);
+            createImageBitmap(file).then(function (bitmap) {
+                _this.imageLoader(bitmap);
+            });
         });
     };
     return ImageEditor;

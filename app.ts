@@ -1,45 +1,48 @@
 class ImageEditor {
-    private fileReader = new FileReader();
-    private image = new Image();
     public imageCanvas;
     public imageCtx;
+    public worker = new Worker('worker.js');
     constructor() {
         this.getCanvasElement();
         this.inputReader();
     }
-
-    private imageLoader() {
-        this.image.addEventListener('load', (event) => {
-            this.imageCtx.canvas.width = this.image.width;
-            this.imageCtx.canvas.height = this.image.height;
-            console.log(this.imageCtx);
-            this.imageCtx.drawImage(this.image, 0,0);
-        });
+    private applyFilter(image) {
+        let imageData = this.imageCtx.getImageData(0, 0, image.width, image.height);
+        this.worker.postMessage(imageData, [imageData.data.buffer]);
+        this.listenToWorker();
     }
 
-    private readFile(file) {
-        this.fileReader.readAsDataURL(file);
-        this.fileReader.addEventListener('load', (event) => {
-            let base64 = event.target['result'];
-            this.image.src = base64;
-            this.imageLoader();
+
+    private listenToWorker() {
+        this.worker.addEventListener('message', (d) => {
+            const imageData = d.data;
+            this.imageCtx.putImageData(imageData, 0, 0);
         })
     }
 
-    public getCanvasElement() {
+    private imageLoader(image): void {
+            this.imageCtx.canvas.width = image.width;
+            this.imageCtx.canvas.height = image.height;
+            this.imageCtx.drawImage(image, 0,0);
+            this.applyFilter(image);
+    }
+
+    public getCanvasElement(): void {
         this.imageCanvas = <HTMLCanvasElement> document.querySelector('#image-canvas');
         this.imageCtx = this.imageCanvas.getContext('2d');
     }
 
-    public inputReader() {
+    public inputReader(): void {
         let input = document.getElementById('image-uploader');
         input.addEventListener('change', (event) => {
             let file = event.target['files'][0];
-            this.readFile(file);
+            createImageBitmap(file).then((bitmap) => {
+                this.imageLoader(bitmap);
+            })
         })
     }
 }
 
-window.onload =function () {
+window.onload = (): ImageEditor => {
    return new ImageEditor();
 };
